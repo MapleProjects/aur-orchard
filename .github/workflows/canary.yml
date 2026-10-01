@@ -18,13 +18,13 @@ jobs:
           git config --global --add safe.directory '*'
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Take workspace ownership
         run: chown -R builder:builder "$GITHUB_WORKSPACE"
 
       - name: Build from latest upstream main
-        run: sudo -u builder env HOME=/home/builder makepkg -C --noconfirm
+        run: sudo -u builder env HOME=/home/builder makepkg -C -d --noconfirm
 
       - name: Report package
         run: ls -lh *.pkg.tar.zst
