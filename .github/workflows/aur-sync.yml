@@ -13,15 +13,15 @@ jobs:
     runs-on: ubuntu-latest
     container: archlinux:latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Bootstrap Arch
         run: |
           pacman -Syu --noconfirm --needed git sudo openssh
           useradd -m builder
           echo 'builder ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
           git config --global --add safe.directory '*'
+
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Refresh pkgver from upstream
         run: |
@@ -40,6 +40,7 @@ jobs:
       - name: Update PKGBUILD and .SRCINFO
         id: update
         run: |
+          git rev-parse --git-dir >/dev/null 2>&1 || { echo "workspace no es un repo git" >&2; exit 1; }
           sed -i "s/^pkgver=.*/pkgver=$VER/" PKGBUILD
           chown -R builder:builder "$GITHUB_WORKSPACE"
           sudo -u builder env HOME=/home/builder makepkg --printsrcinfo > .SRCINFO
