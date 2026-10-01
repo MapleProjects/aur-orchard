@@ -1,0 +1,71 @@
+name: AUR sync
+
+on:
+  schedule:
+    - cron: '43 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Bootstrap Arch
+        run: |
+          pacman -Syu --noconfirm --needed git sudo openssh
+          useradd -m builder
+          echo 'builder ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+          git config --global --add safe.directory '*'
+
+      - name: Refresh pkgver from upstream
+        run: |
+          git clone --filter=blob:none https://github.com/SFG5453/Orchard.git /tmp/upstream
+          cd /tmp/upstream
+          desc="$(git describe --tags --long 2>/dev/null || true)"
+          if [ -n "$desc" ]; then
+            ver="${desc#v}"
+            ver="${ver//-/.}"
+          else
+            ver="r$(git rev-list --count HEAD).g$(git rev-parse --short HEAD)"
+          fi
+          echo "VER=$ver" >> "$GITHUB_ENV"
+          echo "Upstream pkgver: $ver"
+
+      - name: Update PKGBUILD and .SRCINFO
+        id: update
+        run: |
+          sed -i "s/^pkgver=.*/pkgver=$VER/" PKGBUILD
+          chown -R builder:builder "$GITHUB_WORKSPACE"
+          sudo -u builder env HOME=/home/builder makepkg --printsrcinfo > .SRCINFO
+          chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE"
+          if git diff --quiet PKGBUILD .SRCINFO; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit to GitHub
+        if: steps.update.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add PKGBUILD .SRCINFO
+          git commit -m "pkgver $VER"
+          git push
+
+      - name: Push to AUR
+        if: steps.update.outputs.changed == 'true'
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$AUR_SSH_KEY" > ~/.ssh/id_aur
+          chmod 600 ~/.ssh/id_aur
+          GIT_SSH_COMMAND="ssh -i ~/.ssh/id_aur -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new" \
+            git push ssh://aur@aur.archlinux.org/orchard-git.git HEAD:master

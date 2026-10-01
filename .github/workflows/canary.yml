@@ -1,0 +1,28 @@
+name: Canary build
+
+on:
+  schedule:
+    - cron: '17 6 * * 0'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Bootstrap Arch
+        run: |
+          pacman -Syu --noconfirm --needed base-devel git nodejs npm rust sudo
+          useradd -m builder
+          echo 'builder ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+          git config --global --add safe.directory '*'
+          chown -R builder:builder "$GITHUB_WORKSPACE"
+
+      - name: Build from latest upstream main
+        run: sudo -u builder env HOME=/home/builder makepkg -C --noconfirm
+
+      - name: Report package
+        run: ls -lh *.pkg.tar.zst
