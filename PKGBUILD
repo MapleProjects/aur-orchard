@@ -1,7 +1,7 @@
 # Maintainer: MapleProjects <mapleprojects@users.noreply.github.com>
 
 pkgname=orchard-git
-pkgver=1.0.0.canary.9.54.ga009b28
+pkgver=1.0.0.canary.9.58.g6e2df4f
 pkgrel=1
 pkgdesc='Power-user desktop client for YouTube Music with beat-matched crossfade, audiophile EQ and local replay'
 arch=('x86_64')
