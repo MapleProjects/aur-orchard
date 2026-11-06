@@ -1,6 +1,6 @@
 pkgbase = orchard-git
 	pkgdesc = Power-user desktop client for YouTube Music with beat-matched crossfade, audiophile EQ and local replay
-	pkgver = 1.0.0.canary.9.189.g5bdef4a
+	pkgver = 2.0.0.beta.10.mobile.1.gd30e6c7
 	pkgrel = 1
 	url = https://github.com/SFG5453/Orchard
 	arch = x86_64
